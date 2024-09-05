@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoCards</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        .hide {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"/>
+</head>
+
+<body>
+    <h1> EchoCards </h1>
+    <div class="container">
+        <div class="start-quiz-con">
+            <button id="start">Start Quiz</button>
+        </div>
+    </div>
+
+    <div class="question-container hide" id="flashcard">
+        <h2></h2>
+        <div class="question-con">
+            <button id="close-button">Exit</button>
+            <div id="question"></div>
+            <div id="response"></div>
+            <div id="result"></div>
+            <button id="back-button" class="hide">Back</button>
+            <button id="next-button">Next</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="add-flashcard-con">
+            <button id="add-flashcard">Add Flashcard</button>
+        </div>
+    </div>
+
+    <div class ="new-flashcard-con hide" id="new-flashcard">
+        <h2>Add Flashcard</h2>
+        <div class="wrapper">
+            <div class="card-error-con">
+                <span class="" id="card-error">Input fields cannot be empty!</span>
+            </div>
+            <i class="fa-solid fa-xmark"></i>
+        </div>
+
+        <label for="new-question">Question:</label>
+        <textarea
+        class="input"
+        id="new-question"
+        placeholder="Type the question here..."
+        rows="2"
+        ></textarea>
+        <label for="answer">Answer:</label>
+        <textarea 
+        class="input"
+        id="new-answer"
+        rows="4"
+        placeholder="Type the answer here..."
+        ></textarea>
+        <button id="save-button">Save</button>
+    </div>
+
+    <div class="container">
+        <div class="view-cards-con">
+            <button id="view-cards">View Flashcards</button>
+        </div>
+    </div>
+
+    <div class="flashcards-list hide" id="flashcards-list">
+        <h2>Your Flashcards</h2>
+        <div id="cards-container"></div>
+        <button id="menu">Menu</button>
+    </div>
+
+    <script>
+        const flashcards = [
+            { question: "What is my name?", answer: "cat" },
+            { question: "What is my fav color", answer: "dog" },
+            { question: "Hi", answer: "bye" }
+        ];
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        const questionElement = document.getElementById("question");
+        const responseElement = document.getElementById("response");
+        const resultElement = document.getElementById("result");
+
+        const synth = window.speechSynthesis;
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+
+        let currentCard = 0
+
+        const nextButton = document.getElementById("next-button");
+
+        document.getElementById("start").addEventListener("click", () => {
+            console.log("Start button clicked");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.add("hide");
+            });
+            document.getElementById("flashcard").classList.remove("hide");
+            shuffle(flashcards);
+            currentCard = 0;
+            askQuestion();
+        });
+
+        function askQuestion() {
+            const currentQuestion = flashcards[currentCard].question;
+            questionElement.textContent = `${currentQuestion}`;
+
+            const utterance = new SpeechSynthesisUtterance(currentQuestion);
+            synth.speak(utterance);
+
+            resultElement.textContent="";
+            responseElement.textContent = "";
+
+            backButton.classList.add("hide");
+
+            if (currentCard > 0) {
+                backButton.classList.remove("hide");
+            }
+
+            utterance.onend = function () {
+                recognition.start();
+            };
+        }
+
+        recognition.onresult = function (event) {
+            const userResponse = event.results[0][0].transcript;
+            responseElement.textContent = `You said: ${userResponse}`;
+            checkAnswer(userResponse)
+        };
+
+        function checkAnswer(userResponse) {
+            const correctAnswer = flashcards[currentCard].answer;
+            if (userResponse.toLowerCase() == correctAnswer.toLowerCase()) {
+                resultElement.textContent = "Correct!";
+            } else {
+                resultElement.textContent = `Incorrect. The correct answer was: ${correctAnswer}`;
+            }
+
+            if (currentCard < flashcards.length - 1) {
+                nextButton.classList.remove("hide");
+            } else {
+                resultElement.textContent += " Quiz Finished!";
+            }
+        }
+
+        nextButton.addEventListener("click", () => {
+            currentCard++;
+            if (currentCard < flashcards.length) {
+                askQuestion();
+            }
+        });
+
+        const backButton = document.getElementById("back-button");
+
+        backButton.addEventListener("click", () => {
+            if (currentCard > 0) {
+                currentCard--;
+                askQuestion();
+            }
+        });
+
+        recognition.onerror = function (event) {
+            resultElement.textContent = "Error occurred in recognition " + event.error;
+        };
+
+        function addFlashcard(question, answer) {
+            flashcards.push({ question: question, answer: answer });
+        }
+
+        document.getElementById("add-flashcard").addEventListener("click", () => {
+            console.log("Add flashcard button clicked");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.add("hide")
+            })
+            document.getElementById("new-flashcard").classList.remove("hide");
+        });
+
+        document.getElementById("save-button").addEventListener("click", () => {
+            const newQuestion = document.getElementById("new-question").value.trim();
+            const newAnswer = document.getElementById("new-answer").value.trim();
+
+            if (newQuestion === "" || newAnswer === "") {
+                document.getElementById("card-error").classList.remove("hide");
+                return;
+            }
+
+            document.getElementById("card-error").classList.add("hide");
+
+            addFlashcard(newQuestion, newAnswer);
+
+            document.getElementById("new-question").value = "";
+            document.getElementById("new-answer").value = "";
+
+            console.log(flashcards);
+           
+        });
+
+        const closeButton = document.querySelector('.fa-xmark');
+
+        closeButton.addEventListener('click', () => {
+            document.getElementById("new-flashcard").classList.add("hide");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.remove("hide");
+            });
+        });
+
+        const exitButton = document.getElementById('close-button');
+        
+        exitButton.addEventListener('click', () => {
+            document.getElementById("flashcard").classList.add("hide");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.remove("hide")
+            })
+            currentCard = 0;
+        })
+
+        const viewCardsButton = document.getElementById("view-cards");
+        const cardsContainer = document.getElementById("cards-container");
+        const menuButton = document.getElementById("menu");
+
+        function displayFlashcards() {
+            cardsContainer.innerHTML = ''; // Clear previous content
+
+            flashcards.forEach((card, index) => {
+            const cardElement = document.createElement("div");
+            cardElement.classList.add("flashcard");
+
+            const questionElement = document.createElement("p");
+            questionElement.textContent = `Q${index + 1}: ${card.question}`;
+
+            const answerElement = document.createElement("p");
+            answerElement.textContent = `A${index + 1}: ${card.answer}`;
+
+            cardElement.appendChild(questionElement);
+            cardElement.appendChild(answerElement);
+
+            cardsContainer.appendChild(cardElement);
+            });
+        }   
+
+        viewCardsButton.addEventListener("click", () => {
+            console.log("View Flashcards button clicked");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.add("hide");
+            });
+            document.getElementById("flashcards-list").classList.remove("hide");
+            displayFlashcards();
+        })
+
+        menuButton.addEventListener("click", () => {
+            document.getElementById("flashcards-list").classList.add("hide");
+            const containers = document.querySelectorAll(".container");
+            containers.forEach(container => {
+                container.classList.remove("hide");
+            });
+        });
+
+
+
+        
+
+
+
+
+
+
+
+        
+    </script>
+</body>
+
+</html>
