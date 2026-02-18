@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoCards</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css"/>
+</head>
+
+<body>
+
+    <!-- ── MAIN MENU ── -->
+    <div class="screen" id="screen-menu">
+        <div class="brand">
+            <i class="fa-solid fa-bolt-lightning brand-icon"></i>
+            <h1 class="brand-name">EchoCards</h1>
+            <p class="brand-sub">Voice-powered flashcard learning</p>
+        </div>
+
+        <div class="card-count-badge" id="card-count-badge">
+            <i class="fa-solid fa-layer-group"></i>
+            <span id="card-count">3</span> cards in your deck
+        </div>
+
+        <div class="menu-actions">
+            <button class="btn btn-primary btn-lg" id="start">
+                <i class="fa-solid fa-microphone"></i> Start Quiz
+            </button>
+            <button class="btn btn-secondary btn-lg" id="view-cards">
+                <i class="fa-solid fa-cards-blank"></i> View Flashcards
+            </button>
+            <button class="btn btn-ghost btn-lg" id="add-flashcard">
+                <i class="fa-solid fa-plus"></i> Add Flashcard
+            </button>
+        </div>
+    </div>
+
+    <!-- ── QUIZ SCREEN ── -->
+    <div class="screen hide" id="screen-quiz">
+        <div class="quiz-header">
+            <button class="icon-btn" id="close-button" title="Exit quiz">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="progress-info">
+                <span id="progress-label">Card 1 of 3</span>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="quiz-card">
+            <div class="quiz-state" id="quiz-state">
+                <i class="fa-solid fa-microphone-lines state-icon listening-icon hide" id="icon-listening"></i>
+                <i class="fa-solid fa-circle-check state-icon correct-icon hide" id="icon-correct"></i>
+                <i class="fa-solid fa-circle-xmark state-icon wrong-icon hide" id="icon-wrong"></i>
+                <i class="fa-solid fa-volume-high state-icon speaking-icon hide" id="icon-speaking"></i>
+            </div>
+
+            <div id="question" class="quiz-question"></div>
+            <div id="response" class="quiz-response"></div>
+            <div id="result" class="quiz-result"></div>
+        </div>
+
+        <div class="quiz-nav">
+            <button class="btn btn-ghost hide" id="back-button">
+                <i class="fa-solid fa-chevron-left"></i> Back
+            </button>
+            <button class="btn btn-primary hide" id="next-button">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── ADD FLASHCARD SCREEN ── -->
+    <div class="screen hide" id="screen-add">
+        <div class="screen-header">
+            <button class="icon-btn" id="close-add-btn" title="Cancel">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h2 class="screen-title">New Flashcard</h2>
+        </div>
+
+        <div class="form-group">
+            <label for="new-question">Question</label>
+            <textarea
+                class="input"
+                id="new-question"
+                placeholder="e.g. What is the capital of France?"
+                rows="3"
+            ></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="new-answer">Answer</label>
+            <textarea
+                class="input"
+                id="new-answer"
+                rows="3"
+                placeholder="e.g. Paris"
+            ></textarea>
+        </div>
+
+        <p class="field-error hide" id="card-error">
+            <i class="fa-solid fa-triangle-exclamation"></i> Both fields are required.
+        </p>
+
+        <button class="btn btn-primary btn-full" id="save-button">
+            <i class="fa-solid fa-floppy-disk"></i> Save Flashcard
+        </button>
+    </div>
+
+    <!-- ── VIEW CARDS SCREEN ── -->
+    <div class="screen hide" id="screen-view">
+        <div class="screen-header">
+            <button class="icon-btn" id="back-to-menu-btn" title="Back to menu">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h2 class="screen-title">Your Flashcards</h2>
+        </div>
+
+        <div id="cards-container" class="cards-grid"></div>
+    </div>
+
+    <!-- ── QUIZ FINISHED SCREEN ── -->
+    <div class="screen hide" id="screen-results">
+        <div class="results-content">
+            <div class="results-trophy">🎉</div>
+            <h2 class="results-title">Quiz Complete!</h2>
+            <div class="results-score" id="results-score"></div>
+            <p class="results-sub" id="results-sub"></p>
+            <button class="btn btn-primary btn-lg" id="results-menu-btn">
+                <i class="fa-solid fa-house"></i> Back to Menu
+            </button>
+            <button class="btn btn-secondary btn-lg" id="results-retry-btn">
+                <i class="fa-solid fa-rotate-right"></i> Try Again
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ── DATA ──────────────────────────────────────────────────────────────
+        let flashcards = [
+            { question: "What is the capital of France?", answer: "Paris" },
+            { question: "What planet is closest to the Sun?", answer: "Mercury" },
+            { question: "How many sides does a hexagon have?", answer: "six" }
+        ];
+
+        let currentCard = 0;
+        let correctCount = 0;
+
+        // ── HELPERS ───────────────────────────────────────────────────────────
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hide'));
+            document.getElementById(id).classList.remove('hide');
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        function updateCardCount() {
+            document.getElementById('card-count').textContent = flashcards.length;
+        }
+
+        // ── SPEECH ────────────────────────────────────────────────────────────
+        const synth = window.speechSynthesis;
+        let recognition;
+        try {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+        } catch (e) {
+            console.warn('Speech recognition not available');
+        }
+
+        function setIcon(name) {
+            ['listening', 'correct', 'wrong', 'speaking'].forEach(n => {
+                document.getElementById(`icon-${n}`).classList.add('hide');
+            });
+            if (name) document.getElementById(`icon-${name}`).classList.remove('hide');
+        }
+
+        // ── QUIZ ──────────────────────────────────────────────────────────────
+        document.getElementById('start').addEventListener('click', () => {
+            if (flashcards.length === 0) {
+                alert('Add some flashcards first!');
+                return;
+            }
+            shuffle(flashcards);
+            currentCard = 0;
+            correctCount = 0;
+            showScreen('screen-quiz');
+            askQuestion();
+        });
+
+        function updateProgress() {
+            const total = flashcards.length;
+            const pct = ((currentCard) / total) * 100;
+            document.getElementById('progress-label').textContent = `Card ${currentCard + 1} of ${total}`;
+            document.getElementById('progress-bar').style.width = pct + '%';
+        }
+
+        function askQuestion() {
+            const card = flashcards[currentCard];
+            document.getElementById('question').textContent = card.question;
+            document.getElementById('response').textContent = '';
+            document.getElementById('result').textContent = '';
+            document.getElementById('result').className = 'quiz-result';
+            document.getElementById('back-button').classList.toggle('hide', currentCard === 0);
+            document.getElementById('next-button').classList.add('hide');
+            updateProgress();
+            setIcon('speaking');
+
+            const utterance = new SpeechSynthesisUtterance(card.question);
+            utterance.onend = () => {
+                setIcon('listening');
+                document.getElementById('response').textContent = 'Listening…';
+                if (recognition) recognition.start();
+            };
+            synth.speak(utterance);
+        }
+
+        if (recognition) {
+            recognition.onresult = function (event) {
+                const userResponse = event.results[0][0].transcript;
+                document.getElementById('response').textContent = `You said: "${userResponse}"`;
+                checkAnswer(userResponse);
+            };
+
+            recognition.onerror = function (event) {
+                setIcon(null);
+                const resultEl = document.getElementById('result');
+                if (event.error === 'no-speech') {
+                    resultEl.textContent = 'No speech detected. Click Next to continue.';
+                } else {
+                    resultEl.textContent = `Mic error: ${event.error}. Click Next to continue.`;
+                }
+                resultEl.className = 'quiz-result result-wrong';
+                document.getElementById('next-button').classList.remove('hide');
+            };
+        }
+
+        function checkAnswer(userResponse) {
+            const correct = flashcards[currentCard].answer;
+            const resultEl = document.getElementById('result');
+            const isCorrect = userResponse.trim().toLowerCase() === correct.trim().toLowerCase();
+
+            if (isCorrect) {
+                correctCount++;
+                resultEl.textContent = 'Correct!';
+                resultEl.className = 'quiz-result result-correct';
+                setIcon('correct');
+            } else {
+                resultEl.textContent = `Not quite. Answer: "${correct}"`;
+                resultEl.className = 'quiz-result result-wrong';
+                setIcon('wrong');
+            }
+
+            document.getElementById('response').textContent = `You said: "${userResponse}"`;
+
+            if (currentCard < flashcards.length - 1) {
+                document.getElementById('next-button').classList.remove('hide');
+            } else {
+                // Last card — show results after a short pause
+                setTimeout(showResults, 1800);
+            }
+        }
+
+        document.getElementById('next-button').addEventListener('click', () => {
+            if (recognition) { try { recognition.stop(); } catch(e) {} }
+            currentCard++;
+            if (currentCard < flashcards.length) askQuestion();
+        });
+
+        document.getElementById('back-button').addEventListener('click', () => {
+            if (recognition) { try { recognition.stop(); } catch(e) {} }
+            if (currentCard > 0) { currentCard--; askQuestion(); }
+        });
+
+        document.getElementById('close-button').addEventListener('click', () => {
+            if (recognition) { try { recognition.stop(); } catch(e) {} }
+            synth.cancel();
+            showScreen('screen-menu');
+        });
+
+        // ── RESULTS ───────────────────────────────────────────────────────────
+        function showResults() {
+            const total = flashcards.length;
+            const pct = Math.round((correctCount / total) * 100);
+            document.getElementById('results-score').textContent = `${correctCount} / ${total} correct`;
+            const msgs = pct === 100 ? 'Perfect score! Amazing!' :
+                         pct >= 70  ? 'Great job! Keep it up.' :
+                         pct >= 40  ? 'Good effort. Practice more.' :
+                                      'Keep studying — you\'ve got this!';
+            document.getElementById('results-sub').textContent = msgs;
+            showScreen('screen-results');
+        }
+
+        document.getElementById('results-menu-btn').addEventListener('click', () => showScreen('screen-menu'));
+        document.getElementById('results-retry-btn').addEventListener('click', () => {
+            shuffle(flashcards);
+            currentCard = 0;
+            correctCount = 0;
+            showScreen('screen-quiz');
+            askQuestion();
+        });
+
+        // ── ADD FLASHCARD ─────────────────────────────────────────────────────
+        document.getElementById('add-flashcard').addEventListener('click', () => {
+            document.getElementById('new-question').value = '';
+            document.getElementById('new-answer').value = '';
+            document.getElementById('card-error').classList.add('hide');
+            showScreen('screen-add');
+        });
+
+        document.getElementById('close-add-btn').addEventListener('click', () => {
+            showScreen('screen-menu');
+        });
+
+        document.getElementById('save-button').addEventListener('click', () => {
+            const q = document.getElementById('new-question').value.trim();
+            const a = document.getElementById('new-answer').value.trim();
+
+            if (!q || !a) {
+                document.getElementById('card-error').classList.remove('hide');
+                return;
+            }
+
+            document.getElementById('card-error').classList.add('hide');
+            flashcards.push({ question: q, answer: a });
+            updateCardCount();
+            showScreen('screen-menu');
+        });
+
+        // ── VIEW CARDS ────────────────────────────────────────────────────────
+        document.getElementById('view-cards').addEventListener('click', () => {
+            displayFlashcards();
+            showScreen('screen-view');
+        });
+
+        document.getElementById('back-to-menu-btn').addEventListener('click', () => {
+            showScreen('screen-menu');
+        });
+
+        function displayFlashcards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            if (flashcards.length === 0) {
+                container.innerHTML = '<p class="empty-state">No flashcards yet. Add one!</p>';
+                return;
+            }
+
+            flashcards.forEach((card, index) => {
+                const el = document.createElement('div');
+                el.className = 'fc-card';
+                el.innerHTML = `
+                    <div class="fc-card-header">Card ${index + 1}</div>
+                    <div class="fc-card-q"><span class="fc-label">Q</span>${card.question}</div>
+                    <div class="fc-card-a"><span class="fc-label fc-label-a">A</span>${card.answer}</div>
+                    <button class="fc-delete-btn" data-index="${index}" title="Delete card">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                container.appendChild(el);
+            });
+
+            container.querySelectorAll('.fc-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.currentTarget.dataset.index);
+                    flashcards.splice(idx, 1);
+                    updateCardCount();
+                    displayFlashcards();
+                });
+            });
+        }
+
+        // ── INIT ──────────────────────────────────────────────────────────────
+        updateCardCount();
+    </script>
+</body>
+
+</html>
